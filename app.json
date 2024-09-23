@@ -8,7 +8,7 @@
   "appSection": "Network",
   "appSize": "13.1M",
   "appInstalledSize": "13.2M",
-  "appRemovable": "NO",
+  "appRemovable": "YES",
   "appTranslationFile": "languages/Translation",
   "appPackageName": "ddns-go-unas",
   "appDescription": "This is an U-NAS DDNS App that provides DDNS services through DDNS GO.",
