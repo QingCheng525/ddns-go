@@ -42,17 +42,28 @@ if($action == "getConfig") {
     // DDNS GO服务已经安装，判断是否运行
     $enable = checkServiceStatus("ddns-go");
   }
+  // 获取共享文件夹列表
+  $shareFolders = getAllSharefolder();
+  // 获取homes目录中apps的目录
+  $homesAppsFolder = getHomesAppsDir();
   // 读取配置文件中的配置
   $configFile = '/unas/apps/ddns-go/config/config.json';
   if(file_exists($configFile)) {
     $jsonString = file_get_contents($configFile);
     $configData = json_decode($jsonString, true);
     $configData['enable'] = $enable;
+    $configData['shareFolders'] = $shareFolders;
+    $configData['homesAppsFolder'] = $homesAppsFolder;
+    if(empty($jsonObj->configDir)) {
+      $configData['configDir'] = $homesAppsFolder;
+    }
     echo json_encode($configData);
   } else {
     echo json_encode(array(
       'enable' => $enable,
-      'configDir' => $configDir,
+      'homesAppsFolder' => $homesAppsFolder,
+      'shareFolders' => $shareFolders,
+      'configDir' => $homesAppsFolder,
       'port' => 9876,
       'updateInterval' => 300,
       'comparisonInterval' => 6,
@@ -68,11 +79,37 @@ if($action == "getConfig") {
     $enable = $jsonObj->enable;
   }
   // ddns-go的配置文件目录
-  $configDir = "/unas/apps/ddns-go/config";
   if (property_exists($jsonObj, 'configDir')) {
     $configDir = $jsonObj->configDir;
+  } else {
+    // 配置目录未设置
+    echo json_encode(array(
+      'err' => 2,
+      'msg' => 'No configuration directory set'
+    ));
+    return;
   }
-  if (!is_dir($configDir)) {
+
+  // 检测配置目录是否存在
+  if (is_dir($configDir)) {
+    $ddnsGoConfigDir = $configDir."/ddns-go";
+    if (!is_dir($ddnsGoConfigDir)) {
+      // 文件夹不存在，创建文件夹
+      exec("sudo mkdir -p $ddnsGoConfigDir");
+      // 此处不判断是否创建成功，交由后续判断统一处理
+    }
+    if (is_dir($ddnsGoConfigDir)) {
+      // 设置www-data对ddnsGo配置文件目录访问权限
+      exec("sudo setfacl -d -m u:www-data:rwx $ddnsGoConfigDir && sudo setfacl -m m:rwx $ddnsGoConfigDir && sudo setfacl -R -m u:www-data:rwx $ddnsGoConfigDir");
+    } else {
+      // ddnsGo配置目录创建失败
+      echo json_encode(array(
+        'err' => 2,
+        'msg' => 'Failed to create Configuration directory'
+      ));
+      return;
+    }
+  } else {
     // 配置目录不存在
     echo json_encode(array(
       'err' => 2,
@@ -80,6 +117,7 @@ if($action == "getConfig") {
     ));
     return;
   }
+  
   // ddns-go的端口，默认9876
   $port = 9876;
   if (property_exists($jsonObj, 'port')) {
@@ -164,7 +202,7 @@ if($action == "getConfig") {
     $skipVerifyCertStr = $skipVerifyCert ? "true" : "false";
     $noWebStr = $noWeb ? "true" : "false";
     // ddns-go的安装命令
-    $startServiceCommand = "sudo $appFile -s install -l :$port -f $updateInterval -cacheTimes $comparisonInterval -c $configDir/ddns-go-config.yaml";
+    $startServiceCommand = "sudo $appFile -s install -l :$port -f $updateInterval -cacheTimes $comparisonInterval -c $ddnsGoConfigDir/ddns-go-config.yaml";
     if($skipVerifyCert) {
       $startServiceCommand = $startServiceCommand." -skipVerify";
     }
