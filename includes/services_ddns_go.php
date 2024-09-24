@@ -50,11 +50,12 @@ if($action == "getConfig") {
   $configFile = '/unas/apps/ddns-go/config/config.json';
   if(file_exists($configFile)) {
     $jsonString = file_get_contents($configFile);
+    // 如果想要以数组形式解码JSON，可以传递第二个参数为true
     $configData = json_decode($jsonString, true);
     $configData['enable'] = $enable;
     $configData['shareFolders'] = $shareFolders;
     $configData['homesAppsFolder'] = $homesAppsFolder;
-    if(empty($jsonObj->configDir)) {
+    if(empty($configData['configDir'])) {
       $configData['configDir'] = $homesAppsFolder;
     }
     echo json_encode($configData);
@@ -163,7 +164,7 @@ if($action == "getConfig") {
   if(file_exists($configFile)) {
     // 如果配置文件存在，和修改文件权限和所有者
     exec("sudo chown www-data:www-data $configFile");
-    exec("sudo chmod 644 $appFile");
+    exec("sudo chmod 644 $configFile");
     // if (!chown($configFile, "www-data") || !chmod($configFile, "644")) {
     //   echo json_encode(array(
     //     'err' => 1,
