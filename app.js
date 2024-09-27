@@ -13,7 +13,7 @@ DdnsGoApp.App = function () {
   this.active = false
   this.menuIcon = '/apps/ddns-go/images/logo.png?v=6.0.7&'
   this.shortcutIcon = '/apps/ddns-go/images/logo.png?v=6.0.7&'
-  this.entryUrl = '/apps/ddns-go/ddns-go.html?v=6.0.7&'
+  this.entryUrl = '/apps/ddns-go/index.html?v=6.0.7&'
   var self = this
   this.DdnsGoAppWindow = function () {
     if (UNAS.CheckAppState('DDNS GO')) {
@@ -30,8 +30,8 @@ DdnsGoApp.App = function () {
       resizable: true,
       scrollbars: false,
       resizeLimit: { x: [200, 2000], y: [150, 1500] },
-      contentURL: '/apps/ddns-go/ddns-go.html?v=6.0.7&',
-      require: { css: ['/apps/ddns-go/css/ddns-go.css'] },
+      contentURL: '/apps/ddns-go/index.html?v=6.0.7&',
+      require: { css: ['/apps/ddns-go/css/index.css'] },
       onBeforeBuild: function () {
         UNAS.SetAppOpenedWindow('DDNS GO', 'DdnsGoAppWindow')
       },

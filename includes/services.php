@@ -35,6 +35,16 @@ if(!isset($userId)) {
 $action = $jsonObj->action;
 
 if($action == "getConfig") {
+  // 获取homes目录中管理应用的配置的目录
+  $hmoesExtAppsFolder = getHomesAppsDir();
+  if($hmoesExtAppsFolder == "") {
+    // homes目录未开启，提醒用户开启homes目录
+    echo json_encode(array(
+      'err' => 1,
+      'msg' => 'Please enable the home directory in the User Account before use'
+    ));
+    return;
+  }
   // 判断服务状态
   $enable = false;
   // 判断DDNS GO服务是否已经安装
@@ -44,27 +54,27 @@ if($action == "getConfig") {
   }
   // 获取共享文件夹列表
   $shareFolders = getAllSharefolder();
-  // 获取homes目录中apps的目录
-  $homesAppsFolder = getHomesAppsDir();
+  // 获取homes目录中外部应用的配置的目录，即默认的配置目录
+  $homesExtConfigFolder = getDefaultConfigDir();
   // 读取配置文件中的配置
-  $configFile = '/unas/apps/ddns-go/config/config.json';
-  if(file_exists($configFile)) {
-    $jsonString = file_get_contents($configFile);
+  $manageConfigFile = $hmoesExtAppsFolder.'/ddns-go/config.json';
+  if(file_exists($manageConfigFile)) {
+    $jsonString = file_get_contents($manageConfigFile);
     // 如果想要以数组形式解码JSON，可以传递第二个参数为true
-    $configData = json_decode($jsonString, true);
-    $configData['enable'] = $enable;
-    $configData['shareFolders'] = $shareFolders;
-    $configData['homesAppsFolder'] = $homesAppsFolder;
-    if(empty($configData['configDir'])) {
-      $configData['configDir'] = $homesAppsFolder;
+    $manageConfigData = json_decode($jsonString, true);
+    $manageConfigData['enable'] = $enable;
+    $manageConfigData['shareFolders'] = $shareFolders;
+    $manageConfigData['homesExtConfigFolder'] = $homesExtConfigFolder;
+    if(empty($manageConfigData['configDir'])) {
+      $manageConfigData['configDir'] = $homesExtConfigFolder;
     }
-    echo json_encode($configData);
+    echo json_encode($manageConfigData);
   } else {
     echo json_encode(array(
       'enable' => $enable,
-      'homesAppsFolder' => $homesAppsFolder,
+      'homesExtConfigFolder' => $homesExtConfigFolder,
       'shareFolders' => $shareFolders,
-      'configDir' => $homesAppsFolder,
+      'configDir' => $homesExtConfigFolder,
       'port' => 9876,
       'updateInterval' => 300,
       'comparisonInterval' => 6,
@@ -74,6 +84,18 @@ if($action == "getConfig") {
   }
 } if($action == "manage") {
   // 保存配置并启动或者停止服务
+  // 获取homes目录中管理应用的配置的目录
+  $hmoesExtAppsFolder = getHomesAppsDir();
+  if($hmoesExtAppsFolder == "") {
+    // homes目录未开启，提醒用户开启homes目录
+    echo json_encode(array(
+      'err' => 1,
+      'msg' => 'Please enable the home directory in the User Account before use'
+    ));
+    return;
+  }
+  // 获取homes目录中外部应用的配置的目录，即默认的配置目录
+  $homesExtConfigFolder = getDefaultConfigDir();
   // 是否启用ddns-go服务
   $enable = false;
   if (property_exists($jsonObj, "enable")) {
@@ -82,6 +104,14 @@ if($action == "getConfig") {
   // ddns-go的配置文件目录
   if (property_exists($jsonObj, 'configDir')) {
     $configDir = $jsonObj->configDir;
+    if($configDir == $homesExtConfigFolder) {
+      // 如果配置目录为默认目录，则判断默认配置目录是否存在
+      if (!is_dir($homesExtConfigFolder)) {
+        // 默认配置目录不存在，创建默认配置目录
+        exec("sudo mkdir -p $homesExtConfigFolder");
+        // 此处不判断是否创建成功，交由后续判断统一处理
+      }
+    }
   } else {
     // 配置目录未设置
     echo json_encode(array(
@@ -144,7 +174,7 @@ if($action == "getConfig") {
   if (property_exists($jsonObj, 'noWeb')) {
     $noWeb = $jsonObj->noWeb;
   }
-  $configData = array(
+  $manageConfigData = array(
     'configDir' => $configDir,
     'port' => $port,
     'updateInterval' => $updateInterval,
@@ -155,26 +185,11 @@ if($action == "getConfig") {
   // ddns-go的自定义DNS
   if (property_exists($jsonObj, 'dns')) {
     $dns = $jsonObj->dns;
-    $configData['dns'] = $dns;
+    $manageConfigData['dns'] = $dns;
   }
-  // 将配置换成JSON格式
-  $configJson = json_encode($configData);
-  // 配置文件
-  $configFile = '/unas/apps/ddns-go/config/config.json';
-  if(file_exists($configFile)) {
-    // 如果配置文件存在，和修改文件权限和所有者
-    exec("sudo chown www-data:www-data $configFile");
-    exec("sudo chmod 644 $configFile");
-    // if (!chown($configFile, "www-data") || !chmod($configFile, "644")) {
-    //   echo json_encode(array(
-    //     'err' => 1,
-    //     'msg' => 'Failed to change config file permissions and ownership'
-    //   ));
-    //   return;
-    // }
-  }
-  // 将JSON数据写入文件
-  $result = file_put_contents($configFile, $configJson);
+
+  // 保存管理程序的配置
+  $result = saveManageConfig('/ddns-go', $manageConfigData);
   if($result == false) {
     // 配置写入文件失败
     echo json_encode(array(
@@ -189,16 +204,9 @@ if($action == "getConfig") {
   // 修改ddns-go的权限和所有者
   exec("sudo chown www-data:www-data $appFile");
   exec("sudo chmod 755 $appFile");
-  // if (!chown($appFile, "www-data") || !chmod($appFile, "755")) {
-  //   echo json_encode(array(
-  //     'err' => 1,
-  //     'msg' => 'Failed to change app file permissions and ownership'
-  //   ));
-  //   return;
-  // }
 
   // ddns-go的卸载命令
-  $unInstallServiceCommand = "sudo $appFile -s uninstall";
+  $unInstallServiceCommand = "sudo /unas/apps/ddns-go/sbin/uninstall.sh";
   if($enable) {
     $skipVerifyCertStr = $skipVerifyCert ? "true" : "false";
     $noWebStr = $noWeb ? "true" : "false";

@@ -1,7 +1,0 @@
-{
-  "port": 9876,
-  "updateInterval": 300,
-  "comparisonInterval": 6,
-  "skipVerifyCert": false,
-  "noWeb": false
-}
