@@ -189,7 +189,7 @@ if($action == "getConfig") {
   }
 
   // 保存管理程序的配置
-  $result = saveManageConfig('/ddns-go', $manageConfigData);
+  $result = saveManageConfig($hmoesExtAppsFolder.'/ddns-go', $manageConfigData);
   if($result == false) {
     // 配置写入文件失败
     echo json_encode(array(
