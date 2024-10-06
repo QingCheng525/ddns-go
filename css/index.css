@@ -14,6 +14,15 @@
   background-color: #ffffff;
 }
 
+.ddns_go_manager .unas_content_right {
+  text-align: center;
+}
+
+.unas_content_right .project-addr {
+  height: 20px;
+  margin: 10px auto;
+}
+
 .ddns_go_page_logo {
   width: 128px;
   height: 128px;
